@@ -1,0 +1,5 @@
+Built on: 2026-04-04 16:37:34 (Asia/Shanghai)
+Artifact: dist/main.exe
+Size(bytes): 39044529
+SHA256: 70937FE2B167A07B85C847784CF26D73CEDB42B7D7642C899B48533DAF80302F
+Build command: python -m PyInstaller --clean --noconfirm main.spec
