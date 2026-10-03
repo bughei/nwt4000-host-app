@@ -20,7 +20,7 @@
 Get-FileHash .\NWT4000_monitoring.exe -Algorithm SHA256
 ```
 
-将结果与 Release 的 `SHA256SUMS.txt` 比较。仓库内历史路径 `dist/main.exe` 和 `release/nwt4000-host-app-v1.0.0-win64.zip` 属于旧版产物，不代表最新版本；旧版仍可从 [v1.0.0 Release](https://github.com/bughei/nwt4000-host-app/releases/tag/v1.0.0) 获取。
+将结果与 Release 的 `SHA256SUMS.txt` 比较。主分支已移除旧版 `dist/main.exe`，最新 EXE 请从 Release 下载。历史标签及其 Source code 压缩包仍可能包含旧版 `dist/main.exe`，它不代表最新程序。仓库内 `release/nwt4000-host-app-v1.0.0-win64.zip` 也是旧版产物；旧版仍可从 [v1.0.0 Release](https://github.com/bughei/nwt4000-host-app/releases/tag/v1.0.0) 获取。
 
 ## 主要功能
 
