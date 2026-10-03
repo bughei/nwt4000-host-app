@@ -1,4 +1,4 @@
-import tkinter as tk
+﻿import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import serial
 import serial.tools.list_ports
@@ -234,171 +234,174 @@ class App(tk.Tk):
             self.txt_log.config(state=tk.DISABLED)
         self.after(0, _append)
 
+    def create_menu_bar(self):
+        menubar = tk.Menu(self)
+
+        file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="导出当前扫描 CSV", command=self.export_csv)
+        file_menu.add_command(label="导出实验数据 CSV", command=self.export_experiment_csv)
+        file_menu.add_separator()
+        file_menu.add_command(label="退出", command=self.on_close)
+        menubar.add_cascade(label="文件", menu=file_menu)
+
+        device_menu = tk.Menu(menubar, tearoff=0)
+        device_menu.add_command(label="刷新端口", command=self.refresh_ports)
+        device_menu.add_command(label="连接/断开设备", command=self.toggle_connection)
+        device_menu.add_command(label="一键排错探测", command=self.start_auto_detect)
+        menubar.add_cascade(label="设备", menu=device_menu)
+
+        scan_menu = tk.Menu(menubar, tearoff=0)
+        scan_menu.add_checkbutton(label="连续扫描", variable=self.continuous_var)
+        scan_menu.add_command(label="开始扫描", command=self.start_sweep)
+        scan_menu.add_command(label="停止扫描", command=self.stop_sweep)
+        menubar.add_cascade(label="扫描", menu=scan_menu)
+
+        view_menu = tk.Menu(menubar, tearoff=0)
+        view_menu.add_checkbutton(label="显示当前扫描曲线", variable=self.show_scan_var, command=self.replot_data)
+        view_menu.add_checkbutton(label="扣除底噪", variable=self.use_bg_var, command=self.replot_data)
+        view_menu.add_checkbutton(label="平滑曲线", variable=self.use_smooth_var, command=self.replot_data)
+        menubar.add_cascade(label="视图", menu=view_menu)
+
+        tools_menu = tk.Menu(menubar, tearoff=0)
+        tools_menu.add_command(label="保存当前为参考底噪", command=self.save_as_background)
+        tools_menu.add_command(label="固定当前曲线", command=self.save_trace_to_plot)
+        tools_menu.add_command(label="清除所有固定曲线", command=self.clear_all_traces)
+        tools_menu.add_separator()
+        tools_menu.add_command(label="重置参数与缓存", command=self.reset_all_settings)
+        menubar.add_cascade(label="工具", menu=tools_menu)
+
+        self.config(menu=menubar)
+
     def create_widgets(self):
-        left_panel = tk.Frame(self, width=280, bg="#f0f0f0", padx=10, pady=10)
-        left_panel.pack(side=tk.LEFT, fill=tk.Y)
-        left_panel.pack_propagate(False)
+        self.continuous_var = tk.BooleanVar(value=True)
+        self.use_bg_var = tk.BooleanVar()
+        self.use_smooth_var = tk.BooleanVar()
+        self.show_scan_var = tk.BooleanVar(value=True)
 
-        # 1. 通信设置 - 可折叠区域
-        self.btn_toggle_com = tk.Button(left_panel, text="展开通信设置 ▼", command=self.toggle_com_panel, bg="#e0e0e0")
-        self.btn_toggle_com.pack(fill=tk.X, pady=(0, 2))
-        
-        self.lf_com = tk.LabelFrame(left_panel, text="1. 通信设置")
-        self.com_panel_visible = False
-        
-        tk.Label(self.lf_com, text="端口:").pack(anchor=tk.W, padx=5)
-        self.cb_ports = ttk.Combobox(self.lf_com)
-        self.cb_ports.pack(fill=tk.X, padx=5, pady=2)
-        btn_refresh = tk.Button(self.lf_com, text="刷新端口", command=self.refresh_ports, font=("Arial", 8))
-        btn_refresh.pack(anchor=tk.E, padx=5, pady=2)
-        
-        tk.Label(self.lf_com, text="波特率:").pack(anchor=tk.W, padx=5)
-        self.entry_baud = tk.Entry(self.lf_com)
+        top_controls = ttk.Notebook(self)
+        top_controls.pack(side=tk.TOP, fill=tk.X, padx=8, pady=(6, 4))
+
+        tab_comm = tk.Frame(top_controls, padx=8, pady=6)
+        tab_scan = tk.Frame(top_controls, padx=8, pady=6)
+        tab_analysis = tk.Frame(top_controls, padx=8, pady=6)
+        tab_style = tk.Frame(top_controls, padx=8, pady=6)
+        top_controls.add(tab_comm, text="通信")
+        top_controls.add(tab_scan, text="扫描")
+        top_controls.add(tab_analysis, text="分析")
+        top_controls.add(tab_style, text="图表")
+
+        tk.Label(tab_comm, text="端口").grid(row=0, column=0, sticky="w")
+        self.cb_ports = ttk.Combobox(tab_comm, width=12)
+        self.cb_ports.grid(row=1, column=0, padx=(0, 8))
+        tk.Button(tab_comm, text="刷新端口", command=self.refresh_ports).grid(row=1, column=1, padx=(0, 12))
+
+        tk.Label(tab_comm, text="波特率").grid(row=0, column=2, sticky="w")
+        self.entry_baud = tk.Entry(tab_comm, width=10)
         self.entry_baud.insert(0, "57600")
-        self.entry_baud.pack(fill=tk.X, padx=5, pady=2)
-        
-        tk.Label(self.lf_com, text="设备型号:").pack(anchor=tk.W, padx=5)
-        self.cb_model = ttk.Combobox(self.lf_com, values=["NWT150/500/1000", "NWT3000/4000/6000 (x10)"], state="readonly")
+        self.entry_baud.grid(row=1, column=2, padx=(0, 8))
+
+        tk.Label(tab_comm, text="设备型号").grid(row=0, column=3, sticky="w")
+        self.cb_model = ttk.Combobox(tab_comm, values=["NWT150/500/1000", "NWT3000/4000/6000 (x10)"], state="readonly", width=26)
         self.cb_model.current(1)
-        self.cb_model.pack(fill=tk.X, padx=5, pady=2)
+        self.cb_model.grid(row=1, column=3, padx=(0, 8))
 
-        self.btn_connect = tk.Button(self.lf_com, text="打开串口", command=self.toggle_connection, bg="#dddddd")
-        self.btn_connect.pack(fill=tk.X, padx=5, pady=5)
-        
-        self.btn_detect = tk.Button(self.lf_com, text="一键排错探测", command=self.start_auto_detect, font=("Arial", 8))
-        self.btn_detect.pack(fill=tk.X, padx=5, pady=(0,5))
+        self.btn_connect = tk.Button(tab_comm, text="打开串口", command=self.toggle_connection, bg="#dddddd", width=12)
+        self.btn_connect.grid(row=1, column=4, padx=(0, 8))
+        self.btn_detect = tk.Button(tab_comm, text="一键排错探测", command=self.start_auto_detect, width=12)
+        self.btn_detect.grid(row=1, column=5)
 
-        lf_scan = tk.LabelFrame(left_panel, text="2. 扫描参数")
-        lf_scan.pack(fill=tk.X, pady=2)
-        
-        tk.Label(lf_scan, text="起始频率 (支持k/m/g):").pack(anchor=tk.W, padx=5)
-        self.entry_start = tk.Entry(lf_scan)
-        self.entry_start.insert(0, "1000000") 
+        tk.Label(tab_scan, text="起始频率(Hz)").grid(row=0, column=0, sticky="w")
+        self.entry_start = tk.Entry(tab_scan, width=14)
+        self.entry_start.insert(0, "1000000")
         self.entry_start.bind("<Return>", self.on_freq_entry_return)
         self.entry_start.bind("<FocusOut>", self.on_freq_entry_return)
-        self.entry_start.pack(fill=tk.X, padx=5)
-        
-        tk.Label(lf_scan, text="终止频率 (支持k/m/g):").pack(anchor=tk.W, padx=5)
-        self.entry_stop = tk.Entry(lf_scan)
-        self.entry_stop.insert(0, "30000000") 
+        self.entry_start.grid(row=1, column=0, padx=(0, 8))
+
+        tk.Label(tab_scan, text="终止频率(Hz)").grid(row=0, column=1, sticky="w")
+        self.entry_stop = tk.Entry(tab_scan, width=14)
+        self.entry_stop.insert(0, "30000000")
         self.entry_stop.bind("<Return>", self.on_freq_entry_return)
         self.entry_stop.bind("<FocusOut>", self.on_freq_entry_return)
-        self.entry_stop.pack(fill=tk.X, padx=5)
-        
-        tk.Label(lf_scan, text="扫描点数 (Points):").pack(anchor=tk.W, padx=5)
-        self.entry_steps = tk.Entry(lf_scan)
+        self.entry_stop.grid(row=1, column=1, padx=(0, 8))
+
+        tk.Label(tab_scan, text="点数").grid(row=0, column=2, sticky="w")
+        self.entry_steps = tk.Entry(tab_scan, width=8)
         self.entry_steps.insert(0, "500")
-        self.entry_steps.pack(fill=tk.X, padx=5, pady=2)
+        self.entry_steps.grid(row=1, column=2, padx=(0, 8))
 
-        lf_cal = tk.Frame(lf_scan)
-        lf_cal.pack(fill=tk.X, pady=2)
-        tk.Label(lf_cal, text="系数(dB/ADC):", font=("Arial", 8)).pack(side=tk.LEFT)
-        self.entry_y_scale = tk.Entry(lf_cal, width=6)
+        tk.Label(tab_scan, text="系数(dB/ADC)").grid(row=0, column=3, sticky="w")
+        self.entry_y_scale = tk.Entry(tab_scan, width=8)
         self.entry_y_scale.insert(0, "0.7")
-        self.entry_y_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
-        
-        tk.Label(lf_cal, text="补偿(dBm):", font=("Arial", 8)).pack(side=tk.LEFT)
-        self.entry_y_offset = tk.Entry(lf_cal, width=5)
+        self.entry_y_scale.grid(row=1, column=3, padx=(0, 8))
+
+        tk.Label(tab_scan, text="补偿(dBm)").grid(row=0, column=4, sticky="w")
+        self.entry_y_offset = tk.Entry(tab_scan, width=8)
         self.entry_y_offset.insert(0, "-250.0")
-        self.entry_y_offset.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
-        
-        self.btn_reset_cache = tk.Button(lf_scan, text="一键重置缓存(恢复默认)", command=self.reset_all_settings, bg="#fce5cd")
-        self.btn_reset_cache.pack(fill=tk.X, padx=5, pady=(5, 2))
+        self.entry_y_offset.grid(row=1, column=4, padx=(0, 8))
 
-        lf_analysis = tk.LabelFrame(left_panel, text="3. 高级分析与多条曲线")
-        lf_analysis.pack(fill=tk.X, pady=5)
-        
-        # 多曲线功能
-        self.btn_save_trace = tk.Button(lf_analysis, text="固定当前曲线 (多图对比)", command=self.save_trace_to_plot, bg="#d9ead3")
-        self.btn_save_trace.pack(fill=tk.X, padx=5, pady=2)
-        
-        self.btn_clear_traces = tk.Button(lf_analysis, text="清除所有固定曲线", command=self.clear_all_traces)
-        self.btn_clear_traces.pack(fill=tk.X, padx=5, pady=2)
+        self.chk_cont = tk.Checkbutton(tab_scan, text="连续扫描", variable=self.continuous_var)
+        self.chk_cont.grid(row=1, column=5, padx=(0, 8))
 
-        self.btn_save_bg = tk.Button(lf_analysis, text="保存当前为参考底噪", command=self.save_as_background)
-        self.btn_save_bg.pack(fill=tk.X, padx=5, pady=2)
-        
-        self.use_bg_var = tk.BooleanVar()
-        self.chk_use_bg = tk.Checkbutton(lf_analysis, text="扣除底噪 (显示平滑相对值)", variable=self.use_bg_var, command=self.replot_data)
-        self.chk_use_bg.pack(anchor=tk.W, padx=5)
+        self.btn_start = tk.Button(tab_scan, text="开始扫描", command=self.start_sweep, bg="green", fg="white", font=("Arial", 11, "bold"), state=tk.DISABLED)
+        self.btn_start.grid(row=1, column=6, padx=(0, 6))
+        self.btn_stop = tk.Button(tab_scan, text="停止", command=self.stop_sweep, bg="red", fg="white", state=tk.DISABLED)
+        self.btn_stop.grid(row=1, column=7, padx=(0, 6))
 
-        self.use_smooth_var = tk.BooleanVar()
-        self.chk_smooth = tk.Checkbutton(lf_analysis, text="平滑曲线 (滑动平均去锯齿)", variable=self.use_smooth_var, command=self.replot_data)
-        self.chk_smooth.pack(anchor=tk.W, padx=5)
+        self.progress = ttk.Progressbar(tab_scan, orient=tk.HORIZONTAL, length=240, mode="determinate")
+        self.progress.grid(row=2, column=0, columnspan=8, sticky="we", pady=(8, 0))
 
-        self.show_scan_var = tk.BooleanVar(value=True)
-        self.chk_show_scan = tk.Checkbutton(lf_analysis, text="显示当前扫描曲线", variable=self.show_scan_var, command=self.replot_data)
-        self.chk_show_scan.pack(anchor=tk.W, padx=5)
-        
-        self.btn_export_csv = tk.Button(lf_analysis, text="导出CSV数据", command=self.export_csv)
-        self.btn_export_csv.pack(fill=tk.X, padx=5, pady=2)
-        self.btn_import_csv = tk.Button(lf_analysis, text="导入CSV到绘图板", command=self.import_csv)
-        self.btn_import_csv.pack(fill=tk.X, padx=5, pady=2)
+        self.btn_save_trace = tk.Button(tab_analysis, text="固定当前曲线", command=self.save_trace_to_plot, bg="#d9ead3")
+        self.btn_save_trace.grid(row=0, column=0, padx=(0, 8), pady=2)
+        self.btn_clear_traces = tk.Button(tab_analysis, text="清除所有固定曲线", command=self.clear_all_traces)
+        self.btn_clear_traces.grid(row=0, column=1, padx=(0, 8), pady=2)
+        self.btn_save_bg = tk.Button(tab_analysis, text="保存当前为参考底噪", command=self.save_as_background)
+        self.btn_save_bg.grid(row=0, column=2, padx=(0, 8), pady=2)
+        self.btn_export_csv = tk.Button(tab_analysis, text="导出CSV数据", command=self.export_csv)
+        self.btn_export_csv.grid(row=0, column=3, padx=(0, 8), pady=2)
+        self.btn_import_csv = tk.Button(tab_analysis, text="导入CSV到绘图板", command=self.import_csv)
+        self.btn_import_csv.grid(row=0, column=4, padx=(0, 8), pady=2)
+        self.btn_reset_cache = tk.Button(tab_analysis, text="重置参数与缓存", command=self.reset_all_settings, bg="#fce5cd")
+        self.btn_reset_cache.grid(row=0, column=5, padx=(0, 8), pady=2)
 
-        lf_plot_style = tk.LabelFrame(left_panel, text="4. 图表样式")
-        lf_plot_style.pack(fill=tk.X, pady=2)
+        self.chk_use_bg = tk.Checkbutton(tab_analysis, text="扣除底噪", variable=self.use_bg_var, command=self.replot_data)
+        self.chk_use_bg.grid(row=1, column=0, sticky="w", padx=(0, 8))
+        self.chk_smooth = tk.Checkbutton(tab_analysis, text="平滑曲线", variable=self.use_smooth_var, command=self.replot_data)
+        self.chk_smooth.grid(row=1, column=1, sticky="w", padx=(0, 8))
+        self.chk_show_scan = tk.Checkbutton(tab_analysis, text="显示当前扫描曲线", variable=self.show_scan_var, command=self.replot_data)
+        self.chk_show_scan.grid(row=1, column=2, sticky="w", padx=(0, 8))
 
-        tk.Label(lf_plot_style, text="字体:").pack(anchor=tk.W, padx=5)
-        self.cb_plot_font = ttk.Combobox(lf_plot_style, values=self.font_family_options, state="readonly")
+        tk.Label(tab_style, text="字体").grid(row=0, column=0, sticky="w")
+        self.cb_plot_font = ttk.Combobox(tab_style, values=self.font_family_options, state="readonly", width=18)
         self.cb_plot_font.set(self.plot_font_family)
-        self.cb_plot_font.pack(fill=tk.X, padx=5, pady=2)
+        self.cb_plot_font.grid(row=1, column=0, padx=(0, 10))
         self.cb_plot_font.bind("<<ComboboxSelected>>", self.apply_plot_style)
 
-        font_size_row = tk.Frame(lf_plot_style)
-        font_size_row.pack(fill=tk.X, padx=5, pady=2)
-        tk.Label(font_size_row, text="轴标题字号:", font=("Arial", 8)).pack(side=tk.LEFT)
-        self.entry_label_font_size = tk.Entry(font_size_row, width=4)
+        tk.Label(tab_style, text="轴标题字号").grid(row=0, column=1, sticky="w")
+        self.entry_label_font_size = tk.Entry(tab_style, width=6)
         self.entry_label_font_size.insert(0, str(self.plot_label_size))
-        self.entry_label_font_size.pack(side=tk.LEFT, padx=(2, 8))
+        self.entry_label_font_size.grid(row=1, column=1, padx=(0, 10))
 
-        tk.Label(font_size_row, text="刻度字号:", font=("Arial", 8)).pack(side=tk.LEFT)
-        self.entry_tick_font_size = tk.Entry(font_size_row, width=4)
+        tk.Label(tab_style, text="刻度字号").grid(row=0, column=2, sticky="w")
+        self.entry_tick_font_size = tk.Entry(tab_style, width=6)
         self.entry_tick_font_size.insert(0, str(self.plot_tick_size))
-        self.entry_tick_font_size.pack(side=tk.LEFT, padx=2)
+        self.entry_tick_font_size.grid(row=1, column=2, padx=(0, 10))
 
         self.entry_label_font_size.bind("<Return>", self.apply_plot_style)
         self.entry_label_font_size.bind("<FocusOut>", self.apply_plot_style)
         self.entry_tick_font_size.bind("<Return>", self.apply_plot_style)
         self.entry_tick_font_size.bind("<FocusOut>", self.apply_plot_style)
-        tk.Button(lf_plot_style, text="应用字体设置", command=self.apply_plot_style).pack(fill=tk.X, padx=5, pady=(2, 4))
+        tk.Button(tab_style, text="应用字体设置", command=self.apply_plot_style).grid(row=1, column=3, padx=(0, 10))
 
-        self.continuous_var = tk.BooleanVar(value=True)
-        self.chk_cont = tk.Checkbutton(left_panel, text="连续扫描", variable=self.continuous_var)
-        self.chk_cont.pack(anchor=tk.W, padx=5, pady=2)
-
-        self.btn_start = tk.Button(left_panel, text="开始扫描", command=self.start_sweep, 
-                                   bg="green", fg="white", font=("Arial", 14, "bold"), state=tk.DISABLED)
-        self.btn_start.pack(fill=tk.X, pady=5)
-
-        self.btn_stop = tk.Button(left_panel, text="停止", command=self.stop_sweep, bg="red", fg="white", state=tk.DISABLED)
-        self.btn_stop.pack(fill=tk.X, pady=2)
-        
-        self.progress = ttk.Progressbar(left_panel, orient=tk.HORIZONTAL, length=100, mode="determinate")
-        self.progress.pack(fill=tk.X, pady=5)
-        
-        self.lbl_resonance = tk.Label(left_panel, text="等待扫描...", font=("Arial", 11, "bold"), fg="#1f497d", bg="#e0e0e0", pady=5)
-        self.lbl_resonance.pack(fill=tk.X, pady=(2, 0))
-        
-        self.lbl_cursor = tk.Label(left_panel, text="点击图表任意位置取点", font=("Arial", 9), fg="gray")
-        self.lbl_cursor.pack(fill=tk.X, pady=(2, 5))
-
-        lf_log = tk.LabelFrame(left_panel, text="运行日志")
-        lf_log.pack(fill=tk.BOTH, expand=True, pady=5)
-        self.txt_log = tk.Text(lf_log, height=5, width=30, state=tk.DISABLED, font=("Consolas", 8))
-        self.txt_log.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
-        
-        right_panel = tk.Frame(self, bg="white")
-        right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        
-        # --- 创建左右标签页 ---
-        self.notebook = ttk.Notebook(right_panel)
-        self.notebook.pack(fill=tk.BOTH, expand=True)
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 4))
 
         self.tab_plot = tk.Frame(self.notebook, bg="white")
         self.tab_record = tk.Frame(self.notebook, bg="#f9f9f9")
+        self.tab_log = tk.Frame(self.notebook, bg="#f9f9f9")
 
         self.notebook.add(self.tab_plot, text="扫频图表视图")
         self.notebook.add(self.tab_record, text="实验数据记录")
+        self.notebook.add(self.tab_log, text="运行日志")
         
         # === 扫频图表视图 ===
         self.fig = Figure(figsize=(6, 5), dpi=100)
@@ -423,6 +426,13 @@ class App(tk.Tk):
 
         self.trace_manager_frame = tk.Frame(self.tab_plot, bg="white")
         self.trace_manager_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=2)
+
+        status_frame = tk.Frame(self.tab_plot, bg="#f5f5f5")
+        status_frame.pack(side=tk.BOTTOM, fill=tk.X)
+        self.lbl_resonance = tk.Label(status_frame, text="等待扫描...", font=("Arial", 11, "bold"), fg="#1f497d", bg="#f5f5f5", pady=4)
+        self.lbl_resonance.pack(side=tk.LEFT, padx=8)
+        self.lbl_cursor = tk.Label(status_frame, text="点击图表任意位置取点", font=("Arial", 9), fg="gray", bg="#f5f5f5")
+        self.lbl_cursor.pack(side=tk.RIGHT, padx=8)
 
         # === 实验记录视图 ===
         top_bar = tk.Frame(self.tab_record, pady=10, padx=10, bg="#f9f9f9")
@@ -462,6 +472,11 @@ class App(tk.Tk):
         self.tree_exp.column("InvQFactor", width=100, anchor=tk.CENTER)
         
         self.tree_exp.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        self.txt_log = tk.Text(self.tab_log, height=8, state=tk.DISABLED, font=("Consolas", 9))
+        self.txt_log.pack(fill=tk.BOTH, expand=True, padx=6, pady=6)
+
+        self.create_menu_bar()
 
     def refresh_ports(self):
         ports = serial.tools.list_ports.comports()
@@ -777,19 +792,13 @@ class App(tk.Tk):
 
     def _read_sweep_params(self):
         try:
-            params = (
+            return (
                 int(self.entry_start.get()),
                 int(self.entry_stop.get()),
                 int(self.entry_steps.get()),
                 float(self.entry_y_offset.get()),
                 float(self.entry_y_scale.get()),
             )
-            start_f, stop_f, steps, _, _ = params
-            if stop_f <= start_f:
-                raise ValueError("stop_f must be greater than start_f")
-            if steps < 2:
-                raise ValueError("steps must be >= 2")
-            return params
         except ValueError:
             messagebox.showerror("错误", "参数格式错误")
             return None

@@ -1,5 +1,39 @@
-Built on: 2026-04-04 16:37:34 (Asia/Shanghai)
-Artifact: dist/main.exe
-Size(bytes): 39044529
-SHA256: 70937FE2B167A07B85C847784CF26D73CEDB42B7D7642C899B48533DAF80302F
+Release: v1.1.0
+Build date: 2026-10-03 (Asia/Shanghai)
+Platform: Windows 11, 64-bit
+Python: 3.14.3
+PyInstaller: 6.19.0
+pyserial: 3.5
+matplotlib: 3.10.8
+
+Build configuration: main.spec (one-file, windowed)
 Build command: python -m PyInstaller --clean --noconfirm main.spec
+Output rename: dist/main.exe -> dist/NWT4000_monitoring.exe
+This release reuses the binary already built and checked on 2026-10-03.
+
+Binary: NWT4000_monitoring.exe
+Size: 41466219 bytes
+SHA256: 4663abb79a8ed8c97dc570348dad67f77754b175304cb888b7a451b327b656da
+
+Source SHA256:
+main.py: 70bcd48057d9e2d31e12709ac09dace4b26e678dc53991bbe90385f881da90ec
+nwt_driver.py: 4d1f4b4b74e311d155281cf003f44e15bb54827a5a12a4b9208ccbc052b8069b
+Source files and main.spec were not changed while preparing this release.
+
+Checks completed before release preparation:
+- Python syntax compilation and hidden GUI initialization.
+- Frequency suffix conversion and synthetic resonance-valley Q calculation.
+- Plotting, fixed traces and background interpolation.
+- CSV, configuration and experiment-record workflows with temporary data.
+- Fake-serial sweep command, ADC parsing and callback checks.
+- Executable archive dependency inspection.
+- Executable startup and clean exit on Windows 11 64-bit.
+
+Not verified: physical-instrument sweeps; Windows 10 runtime.
+Known limitation: start/stop ordering and minimum point count are not validated.
+Use stop > start and points >= 2 within your instrument's supported range.
+See CHANGELOG.md and README.md for details.
+
+No personal experiment data or local configuration is included in the release.
+No healing or electrical-stimulation demonstration is included.
+Dependencies are not fully pinned; rebuilding may change binary hashes.
